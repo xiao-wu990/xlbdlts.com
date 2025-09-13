@@ -1,0 +1,1339 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>闲聊聊天室 - Pusher版</title>
+    <script src="https://js.pusher.com/8.4.0/pusher.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #6366f1;
+            --primary-light: #818cf8;
+            --primary-dark: #4f46e5;
+            --secondary: #10b981;
+            --secondary-light: #34d399;
+            --dark: #1f2937;
+            --light: #f9fafb;
+            --gray: #9ca3af;
+            --gray-light: #f3f4f6;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --online: #10b981;
+            --offline: #9ca3af;
+            --bg-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            --message-sent-bg: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            --message-received-bg: #ffffff;
+            --sidebar-bg: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+        }
+        
+        body {
+            background: var(--bg-gradient);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+            color: var(--dark);
+        }
+        
+        .chat-app {
+            width: 100%;
+            max-width: 1200px;
+            height: 90vh;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+            display: flex;
+            overflow: hidden;
+            animation: fadeIn 0.5s ease-out;
+        }
+        
+        /* 左侧边栏样式 */
+        .sidebar {
+            width: 320px;
+            background: var(--sidebar-bg);
+            border-right: 1px solid rgba(0, 0, 0, 0.05);
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            z-index: 10;
+        }
+        
+        .sidebar-header {
+            padding: 24px;
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        
+        .app-logo {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        
+        .logo-icon {
+            width: 36px;
+            height: 36px;
+            background: var(--primary);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 18px;
+            box-shadow: 0 4px 6px rgba(99, 102, 241, 0.3);
+        }
+        
+        .logo-text {
+            font-weight: 700;
+            font-size: 18px;
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        
+        .user-status {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 14px;
+            color: var(--online);
+            background: rgba(16, 185, 129, 0.1);
+            padding: 6px 12px;
+            border-radius: 20px;
+        }
+        
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--online);
+        }
+        
+        .user-setup {
+            padding: 20px;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+            background: rgba(255, 255, 255, 0.5);
+        }
+        
+        .user-input {
+            width: 100%;
+            padding: 12px 16px;
+            border: 1px solid var(--gray-light);
+            border-radius: 12px;
+            font-size: 14px;
+            margin-bottom: 12px;
+            transition: all 0.3s;
+            background: white;
+        }
+        
+        .user-input:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
+        }
+        
+        .join-btn {
+            width: 100%;
+            padding: 12px;
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 4px 6px rgba(99, 102, 241, 0.3);
+        }
+        
+        .join-btn:hover {
+            background: var(--primary-dark);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 10px rgba(99, 102, 241, 0.4);
+        }
+        
+        .join-btn:disabled {
+            background: var(--gray);
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+        
+        .online-users {
+            flex: 1;
+            overflow-y: auto;
+            padding: 16px;
+        }
+        
+        .online-users h3 {
+            margin-bottom: 16px;
+            font-size: 16px;
+            color: var(--dark);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .online-users h3 i {
+            color: var(--primary);
+        }
+        
+        .user-item {
+            display: flex;
+            align-items: center;
+            padding: 10px;
+            border-radius: 12px;
+            margin-bottom: 8px;
+            transition: all 0.3s;
+            cursor: pointer;
+        }
+        
+        .user-item:hover {
+            background: rgba(99, 102, 241, 0.08);
+            transform: translateX(5px);
+        }
+        
+        .user-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 600;
+            margin-right: 12px;
+            position: relative;
+            box-shadow: 0 4px 6px rgba(99, 102, 241, 0.3);
+        }
+        
+        .online-indicator {
+            position: absolute;
+            bottom: 0;
+            right: 0;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: var(--online);
+            border: 2px solid white;
+        }
+        
+        /* 主聊天区域样式 */
+        .chat-main {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background: white;
+            position: relative;
+        }
+        
+        .chat-header {
+            padding: 16px 24px;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(10px);
+        }
+        
+        .chat-user {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        
+        .chat-user-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 600;
+            box-shadow: 0 4px 6px rgba(99, 102, 241, 0.3);
+        }
+        
+        .chat-user-info {
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .chat-user-name {
+            font-weight: 600;
+        }
+        
+        .chat-user-status {
+            font-size: 12px;
+            color: var(--online);
+        }
+        
+        .chat-actions {
+            display: flex;
+            gap: 16px;
+        }
+        
+        .action-btn {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: var(--gray-light);
+            color: var(--dark);
+            border: none;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .action-btn:hover {
+            background: var(--primary);
+            color: white;
+            transform: rotate(15deg);
+        }
+        
+        .chat-messages {
+            flex: 1;
+            padding: 24px;
+            overflow-y: auto;
+            background: var(--light);
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            background-image: 
+                radial-gradient(circle at 25px 25px, rgba(99, 102, 241, 0.1) 2%, transparent 50%),
+                radial-gradient(circle at 75px 75px, rgba(16, 185, 129, 0.1) 2%, transparent 50%);
+            background-size: 100px 100px;
+        }
+        
+        .message {
+            display: flex;
+            flex-direction: column;
+            max-width: 70%;
+            animation: messageIn 0.3s ease-out;
+        }
+        
+        .message.received {
+            align-items: flex-start;
+        }
+        
+        .message.sent {
+            align-items: flex-end;
+            align-self: flex-end;
+        }
+        
+        .message-info {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 8px;
+        }
+        
+        .message-sender {
+            font-weight: 500;
+            font-size: 14px;
+        }
+        
+        .message-time {
+            font-size: 12px;
+            color: var(--gray);
+        }
+        
+        .message-content {
+            padding: 12px 16px;
+            border-radius: 18px;
+            word-wrap: break-word;
+            position: relative;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            transition: transform 0.2s;
+        }
+        
+        .message:hover .message-content {
+            transform: translateY(-2px);
+        }
+        
+        .received .message-content {
+            background: var(--message-received-bg);
+            border-top-left-radius: 4px;
+        }
+        
+        .sent .message-content {
+            background: var(--message-sent-bg);
+            color: white;
+            border-top-right-radius: 4px;
+        }
+        
+        .chat-input-container {
+            padding: 20px 24px;
+            border-top: 1px solid rgba(0, 0, 0, 0.05);
+            background: white;
+        }
+        
+        .message-input-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            background: var(--gray-light);
+            border-radius: 24px;
+            padding: 0 8px;
+            transition: all 0.3s;
+        }
+        
+        .message-input-wrapper:focus-within {
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
+        }
+        
+        .message-input {
+            flex: 1;
+            padding: 14px 8px;
+            border: none;
+            background: transparent;
+            outline: none;
+            font-size: 15px;
+            resize: none;
+            transition: all 0.3s;
+            max-height: 120px;
+        }
+        
+        .send-button {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            background: var(--primary);
+            color: white;
+            border: none;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s;
+            box-shadow: 0 4px 6px rgba(99, 102, 241, 0.3);
+        }
+        
+        .send-button:hover {
+            background: var(--primary-dark);
+            transform: translateY(-2px) scale(1.05);
+        }
+        
+        .send-button:disabled {
+            background: var(--gray);
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+        
+        /* 动画效果 */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        @keyframes messageIn {
+            from { opacity: 0; transform: translateY(10px) scale(0.95); }
+            to { opacity: 1; transform: translateY(0) scale(1); }
+        }
+        
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+        
+        /* 响应式设计 */
+        @media (max-width: 768px) {
+            .chat-app {
+                flex-direction: column;
+                height: 100vh;
+                border-radius: 0;
+            }
+            
+            .sidebar {
+                width: 100%;
+                height: 30%;
+            }
+            
+            .chat-main {
+                height: 70%;
+            }
+            
+            .message {
+                max-width: 85%;
+            }
+        }
+        
+        /* 滚动条样式 */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        
+        ::-webkit-scrollbar-thumb {
+            background: rgba(0, 0, 0, 0.1);
+            border-radius: 4px;
+        }
+        
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(0, 0, 0, 0.2);
+        }
+        
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: var(--success);
+            color: white;
+            padding: 12px 20px;
+            border-radius: 12px;
+            box-shadow: 0 10px 15px rgba(0, 0, 0, 0.2);
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            transform: translateX(100%);
+            transition: transform 0.3s ease-out;
+        }
+        
+        .notification.show {
+            transform: translateX(0);
+        }
+        
+        .notification.error {
+            background: var(--danger);
+        }
+        
+        .notification.warning {
+            background: var(--warning);
+        }
+        
+        .connection-status {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: var(--success);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            z-index: 100;
+        }
+        
+        .connection-status.error {
+            background: var(--danger);
+        }
+        
+        .connection-status.connecting {
+            background: var(--warning);
+        }
+        
+        .contact-panel {
+            padding: 20px;
+            border-top: 1px solid rgba(0, 0, 0, 0.05);
+        }
+        
+        .contact-title {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .contact-buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        
+        .contact-btn {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 12px 16px;
+            background: white;
+            border: 1px solid var(--gray-light);
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-decoration: none;
+            color: var(--dark);
+        }
+        
+        .contact-btn:hover {
+            background: var(--primary-light);
+            color: white;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 6px rgba(99, 102, 241, 0.3);
+        }
+        
+        .contact-btn i {
+            font-size: 18px;
+        }
+        
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .modal-content {
+            background: white;
+            padding: 30px;
+            border-radius: 16px;
+            max-width: 500px;
+            width: 90%;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+        }
+        
+        .modal-title {
+            font-size: 20px;
+            font-weight: 600;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .modal-buttons {
+            display: flex;
+            gap: 12px;
+            justify-content: flex-end;
+            margin-top: 20px;
+        }
+        
+        .modal-btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .modal-btn.primary {
+            background: var(--primary);
+            color: white;
+        }
+        
+        .modal-btn.secondary {
+            background: var(--gray-light);
+            color: var(--dark);
+        }
+        
+        .modal-btn:hover {
+            opacity: 0.9;
+            transform: translateY(-2px);
+        }
+        
+        .connection-test {
+            padding: 15px;
+            margin: 15px 0;
+            background: #f8f9fa;
+            border-radius: 12px;
+            border-left: 4px solid var(--primary);
+        }
+        
+        .test-title {
+            font-weight: 600;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .test-result {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin: 5px 0;
+        }
+        
+        .test-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+        }
+        
+        .test-dot.success {
+            background: var(--success);
+        }
+        
+        .test-dot.failure {
+            background: var(--danger);
+        }
+    </style>
+</head>
+<body>
+    <div class="chat-app">
+        <!-- 左侧边栏 -->
+        <div class="sidebar">
+            <div class="sidebar-header">
+                <div class="app-logo">
+                    <div class="logo-icon">
+                        <i class="fas fa-comments"></i>
+                    </div>
+                    <div class="logo-text">闲聊聊天室</div>
+                </div>
+                <div class="user-status">
+                    <div class="status-dot"></div>
+                    <span id="connectionStatus">准备连接</span>
+                </div>
+            </div>
+            
+            <div class="user-setup">
+                <input type="text" id="usernameInput" class="user-input" placeholder="输入您的昵称" value="用户">
+                <button id="joinBtn" class="join-btn">加入聊天</button>
+                
+                <div class="connection-test">
+                    <div class="test-title">
+                        <i class="fas fa-network-wired"></i> 连接状态
+                    </div>
+                    <div class="test-result">
+                        <div class="test-dot" id="pusherTestDot"></div>
+                        <span id="pusherTestResult">Pusher服务: 准备连接</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="online-users">
+                <h3><i class="fas fa-users"></i> 在线用户 (<span id="onlineCount">0</span>)</h3>
+                <div id="userList">
+                    <!-- 用户列表将由JavaScript生成 -->
+                </div>
+            </div>
+            
+            <div class="contact-panel">
+                <div class="contact-title">
+                    <i class="fas fa-headset"></i> 联系与支持
+                </div>
+                <div class="contact-buttons">
+                    <a href="https://qm.qq.com/q/7KfIOgwnmg" target="_blank" class="contact-btn">
+                        <i class="fab fa-qq"></i>
+                        <span>加入QQ群: 闲聊部队</span>
+                    </a>
+                    <a href="#" id="contactDevBtn" class="contact-btn">
+                        <i class="fas fa-envelope"></i>
+                        <span>联系开发者</span>
+                    </a>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 主聊天区域 -->
+        <div class="chat-main">
+            <div class="chat-header">
+                <div class="chat-user">
+                    <div class="chat-user-avatar" id="currentUserAvatar">用</div>
+                    <div class="chat-user-info">
+                        <div class="chat-user-name" id="currentUserName">闲聊聊天室</div>
+                        <div class="chat-user-status" id="onlineStatus">离线</div>
+                    </div>
+                </div>
+                
+                <div class="chat-actions">
+                    <button class="action-btn" id="themeBtn" title="切换主题">
+                        <i class="fas fa-palette"></i>
+                    </button>
+                    <button class="action-btn" id="refreshBtn" title="重新连接">
+                        <i class="fas fa-sync-alt"></i>
+                    </button>
+                    <button class="action-btn" id="leaveBtn" title="离开聊天">
+                        <i class="fas fa-sign-out-alt"></i>
+                    </button>
+                </div>
+            </div>
+            
+            <div class="chat-messages" id="chatMessages">
+                <div class="message received">
+                    <div class="message-info">
+                        <div class="message-sender">系统</div>
+                        <div class="message-time" id="currentTime"></div>
+                    </div>
+                    <div class="message-content">
+                        欢迎使用闲聊聊天室！请输入昵称并加入聊天。
+                    </div>
+                </div>
+            </div>
+            
+            <div class="chat-input-container">
+                <div class="message-input-wrapper">
+                    <input type="text" class="message-input" id="messageInput" placeholder="输入消息..." disabled>
+                    <button class="send-button" id="sendBtn" disabled>
+                        <i class="fas fa-paper-plane"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 联系开发者模态框 -->
+    <div class="modal" id="contactModal">
+        <div class="modal-content">
+            <div class="modal-title">
+                <i class="fas fa-envelope"></i> 联系开发者
+            </div>
+            <p>您可以通过以下方式联系开发者：</p>
+            <ul style="margin: 15px 0; padding-left: 20px;">
+                <li>QQ邮箱: <a href="mailto:3530388417@qq.com">3530388417@qq.com</a></li>
+                <li>点击上方链接加入QQ群交流</li>
+            </ul>
+            <div class="modal-buttons">
+                <button class="modal-btn secondary" id="closeModalBtn">关闭</button>
+                <button class="modal-btn primary" id="openEmailBtn">打开QQ邮箱</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="notification" id="notification">
+        <i class="fas fa-check-circle"></i>
+        <span id="notificationText"></span>
+    </div>
+
+    <div class="connection-status" id="connectionStatusIndicator">
+        <i class="fas fa-circle"></i>
+        <span>连接状态: 准备连接</span>
+    </div>
+
+    <script>
+        // Pusher配置
+        const PUSHER_CONFIG = {
+            appId: '2043174',
+            key: 'b83af7c1b7c068f602a1',
+            cluster: 'ap1',
+            useTLS: true
+        };
+        
+        // 当前用户信息
+        let currentUser = {
+            id: null,
+            name: '用户',
+            avatar: '用'
+        };
+        
+        let onlineUsers = {};
+        let pusher = null;
+        let channel = null;
+        let isConnected = false;
+        
+        // DOM元素
+        const usernameInput = document.getElementById('usernameInput');
+        const joinBtn = document.getElementById('joinBtn');
+        const messageInput = document.getElementById('messageInput');
+        const sendBtn = document.getElementById('sendBtn');
+        const chatMessages = document.getElementById('chatMessages');
+        const userList = document.getElementById('userList');
+        const onlineCount = document.getElementById('onlineCount');
+        const connectionStatus = document.getElementById('connectionStatus');
+        const onlineStatus = document.getElementById('onlineStatus');
+        const currentUserAvatar = document.getElementById('currentUserAvatar');
+        const currentUserName = document.getElementById('currentUserName');
+        const notification = document.getElementById('notification');
+        const notificationText = document.getElementById('notificationText');
+        const refreshBtn = document.getElementById('refreshBtn');
+        const leaveBtn = document.getElementById('leaveBtn');
+        const themeBtn = document.getElementById('themeBtn');
+        const contactDevBtn = document.getElementById('contactDevBtn');
+        const contactModal = document.getElementById('contactModal');
+        const closeModalBtn = document.getElementById('closeModalBtn');
+        const openEmailBtn = document.getElementById('openEmailBtn');
+        const connectionStatusIndicator = document.getElementById('connectionStatusIndicator');
+        const pusherTestDot = document.getElementById('pusherTestDot');
+        const pusherTestResult = document.getElementById('pusherTestResult');
+        
+        // 初始化应用
+        document.addEventListener('DOMContentLoaded', function() {
+            // 生成唯一用户ID
+            currentUser.id = generateUserId();
+            
+            // 更新当前时间
+            updateTime();
+            setInterval(updateTime, 60000);
+            
+            // 设置事件监听器
+            setupEventListeners();
+            
+            // 初始化界面
+            initializeUI();
+        });
+        
+        // 初始化UI
+        function initializeUI() {
+            // 添加主题切换功能
+            document.querySelectorAll('.theme-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    changeTheme(this.dataset.theme);
+                });
+            });
+        }
+        
+        // 生成唯一用户ID
+        function generateUserId() {
+            return 'user-' + Math.random().toString(36).substr(2, 9) + '-' + Date.now();
+        }
+        
+        // 更新当前时间显示
+        function updateTime() {
+            const now = new Date();
+            const timeString = now.getHours() + ':' + (now.getMinutes() < 10 ? '0' : '') + now.getMinutes();
+            document.getElementById('currentTime').textContent = timeString;
+        }
+        
+        // 初始化Pusher
+        function initializePusher() {
+            try {
+                // 启用Pusher日志记录
+                Pusher.logToConsole = true;
+                
+                // 初始化Pusher
+                pusher = new Pusher(PUSHER_CONFIG.key, {
+                    cluster: PUSHER_CONFIG.cluster,
+                    forceTLS: true,
+                    enabledTransports: ['ws', 'wss']
+                });
+                
+                // 监听连接状态
+                pusher.connection.bind('connected', () => {
+                    showNotification('Pusher已连接');
+                    connectionStatus.textContent = '已连接';
+                    connectionStatus.style.color = 'var(--online)';
+                    connectionStatusIndicator.innerHTML = '<i class="fas fa-circle"></i><span>连接状态: 已连接</span>';
+                    connectionStatusIndicator.className = 'connection-status';
+                    isConnected = true;
+                    pusherTestDot.className = 'test-dot success';
+                    pusherTestResult.textContent = 'Pusher服务: 已连接';
+                    console.log('Pusher连接成功');
+                });
+                
+                pusher.connection.bind('disconnected', () => {
+                    showNotification('Pusher已断开', 'error');
+                    connectionStatus.textContent = '已断开';
+                    connectionStatus.style.color = 'var(--danger)';
+                    connectionStatusIndicator.innerHTML = '<i class="fas fa-circle"></i><span>连接状态: 已断开</span>';
+                    connectionStatusIndicator.className = 'connection-status error';
+                    isConnected = false;
+                    pusherTestDot.className = 'test-dot failure';
+                    pusherTestResult.textContent = 'Pusher服务: 已断开';
+                    console.log('Pusher连接断开');
+                });
+                
+                pusher.connection.bind('connecting', () => {
+                    connectionStatus.textContent = '连接中...';
+                    connectionStatus.style.color = 'var(--warning)';
+                    connectionStatusIndicator.innerHTML = '<i class="fas fa-circle"></i><span>连接状态: 连接中...</span>';
+                    connectionStatusIndicator.className = 'connection-status connecting';
+                    pusherTestDot.className = 'test-dot';
+                    pusherTestResult.textContent = 'Pusher服务: 连接中...';
+                });
+                
+                pusher.connection.bind('connection_error', (error) => {
+                    showNotification('Pusher连接错误: ' + error.error.data.code, 'error');
+                    console.error('Pusher连接错误:', error);
+                    pusherTestDot.className = 'test-dot failure';
+                    pusherTestResult.textContent = 'Pusher服务: 连接错误';
+                });
+                
+                // 订阅频道
+                channel = pusher.subscribe('chat-room');
+                
+                // 监听新消息事件
+                channel.bind('new-message', function(data) {
+                    console.log('收到新消息:', data);
+                    addMessage(data, data.userId === currentUser.id);
+                });
+                
+                // 监听用户加入事件
+                channel.bind('user-joined', function(data) {
+                    console.log('用户加入:', data);
+                    onlineUsers[data.userId] = data;
+                    updateOnlineUsers();
+                    addSystemMessage(`${data.username} 加入了聊天室`);
+                });
+                
+                // 监听用户离开事件
+                channel.bind('user-left', function(data) {
+                    console.log('用户离开:', data);
+                    delete onlineUsers[data.userId];
+                    updateOnlineUsers();
+                    addSystemMessage(`${data.username} 离开了聊天室`);
+                });
+                
+                return true;
+            } catch (error) {
+                console.error('Pusher初始化错误:', error);
+                showNotification('Pusher初始化失败: ' + error.message, 'error');
+                return false;
+            }
+        }
+        
+        // 加入聊天室
+        function joinChat() {
+            const username = usernameInput.value.trim();
+            
+            if (username) {
+                currentUser.name = username;
+                currentUser.avatar = username.charAt(0);
+                
+                // 初始化Pusher
+                if (!initializePusher()) {
+                    return;
+                }
+                
+                // 更新UI
+                usernameInput.disabled = true;
+                joinBtn.disabled = true;
+                messageInput.disabled = false;
+                sendBtn.disabled = false;
+                currentUserAvatar.textContent = currentUser.avatar;
+                currentUserName.textContent = currentUser.name;
+                onlineStatus.textContent = '在线';
+                onlineStatus.style.color = 'var(--online)';
+                
+                // 通知其他用户我加入了
+                sendUserEvent('user-joined');
+                
+                // 显示欢迎消息
+                addSystemMessage(`欢迎 ${currentUser.name} 加入聊天室！`);
+                
+                updateOnlineUsers();
+                
+                // 聚焦到消息输入框
+                messageInput.focus();
+                
+                // 显示通知
+                showNotification('已加入聊天室');
+            } else {
+                showNotification('请输入昵称', 'warning');
+            }
+        }
+        
+        // 发送消息
+        function sendMessage() {
+            const message = messageInput.value.trim();
+            
+            if (message) {
+                const messageData = {
+                    id: Date.now(),
+                    userId: currentUser.id,
+                    username: currentUser.name,
+                    text: message,
+                    time: getTimeString(),
+                    avatar: currentUser.avatar
+                };
+                
+                // 发送消息到Pusher
+                sendMessageToServer(messageData);
+                
+                // 添加到UI（乐观更新）
+                addMessage(messageData, true);
+                
+                // 清空输入框
+                messageInput.value = '';
+                
+                // 显示通知
+                showNotification('消息已发送');
+            }
+        }
+        
+        // 发送消息到服务器
+        async function sendMessageToServer(messageData) {
+            try {
+                // 使用Pusher的客户端事件
+                channel.trigger('client-new-message', messageData);
+                
+                console.log('消息已通过客户端事件发送');
+            } catch (error) {
+                console.error('发送消息错误:', error);
+                showNotification('发送消息失败: ' + error.message, 'error');
+            }
+        }
+        
+        // 发送用户事件（加入/离开）
+        async function sendUserEvent(eventType) {
+            try {
+                const userData = {
+                    userId: currentUser.id,
+                    username: currentUser.name,
+                    avatar: currentUser.avatar,
+                    time: new Date().toISOString()
+                };
+                
+                // 使用Pusher的客户端事件
+                channel.trigger(`client-${eventType}`, userData);
+                
+                console.log('用户事件已发送:', eventType);
+            } catch (error) {
+                console.error('发送用户事件错误:', error);
+            }
+        }
+        
+        // 添加消息到UI
+        function addMessage(messageData, isOwnMessage = false) {
+            const messageElement = document.createElement('div');
+            messageElement.classList.add('message');
+            messageElement.classList.add(isOwnMessage ? 'sent' : 'received');
+            
+            messageElement.innerHTML = `
+                ${!isOwnMessage ? `<div class="message-info">
+                    <div class="message-sender">${messageData.username}</div>
+                    <div class="message-time">${messageData.time}</div>
+                </div>` : ''}
+                <div class="message-content">
+                    ${messageData.text}
+                </div>
+                ${isOwnMessage ? `<div class="message-time">${messageData.time}</div>` : ''}
+            `;
+            
+            chatMessages.appendChild(messageElement);
+            
+            // 滚动到底部
+            scrollToBottom();
+        }
+        
+        // 添加系统消息
+        function addSystemMessage(text) {
+            const messageElement = document.createElement('div');
+            messageElement.classList.add('message');
+            messageElement.style.alignItems = 'center';
+            
+            messageElement.innerHTML = `
+                <div style="background: #e9ecef; padding: 8px 16px; border-radius: 18px; color: #6c757d; font-size: 14px;">
+                    <i class="fas fa-info-circle"></i> ${text}
+                </div>
+            `;
+            
+            chatMessages.appendChild(messageElement);
+            scrollToBottom();
+        }
+        
+        // 更新在线用户列表
+        function updateOnlineUsers() {
+            userList.innerHTML = '';
+            const totalUsers = Object.keys(onlineUsers).length + 1; // +1 包括自己
+            
+            onlineCount.textContent = totalUsers;
+            
+            // 添加当前用户
+            const currentUserElement = document.createElement('div');
+            currentUserElement.classList.add('user-item');
+            currentUserElement.innerHTML = `
+                <div class="user-avatar">
+                    ${currentUser.avatar}
+                    <div class="online-indicator"></div>
+                </div>
+                <div>${currentUser.name} (我)</div>
+            `;
+            userList.appendChild(currentUserElement);
+            
+            // 添加其他用户
+            for (const userId in onlineUsers) {
+                const user = onlineUsers[userId];
+                const userElement = document.createElement('div');
+                userElement.classList.add('user-item');
+                userElement.innerHTML = `
+                    <div class="user-avatar">
+                        ${user.avatar}
+                        <div class="online-indicator"></div>
+                    </div>
+                    <div>${user.username}</div>
+                `;
+                userList.appendChild(userElement);
+            }
+        }
+        
+        // 获取时间字符串
+        function getTimeString() {
+            const now = new Date();
+            return now.getHours() + ':' + (now.getMinutes() < 10 ? '0' : '') + now.getMinutes();
+        }
+        
+        // 显示通知
+        function showNotification(message, type = 'success') {
+            notificationText.textContent = message;
+            notification.className = 'notification';
+            
+            if (type === 'error') {
+                notification.classList.add('error');
+                notification.innerHTML = '<i class="fas fa-exclamation-circle"></i> ' + message;
+            } else if (type === 'warning') {
+                notification.classList.add('warning');
+                notification.innerHTML = '<i class="fas fa-exclamation-triangle"></i> ' + message;
+            } else {
+                notification.innerHTML = '<i class="fas fa-check-circle"></i> ' + message;
+            }
+            
+            notification.classList.add('show');
+            
+            setTimeout(() => {
+                notification.classList.remove('show');
+            }, 3000);
+        }
+        
+        // 滚动到底部
+        function scrollToBottom() {
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+        
+        // 离开聊天室
+        function leaveChat() {
+            if (confirm('确定要退出聊天吗？')) {
+                if (pusher) {
+                    // 通知其他用户我离开了
+                    sendUserEvent('user-left');
+                    
+                    // 断开Pusher连接
+                    pusher.disconnect();
+                }
+                
+                // 重置UI
+                usernameInput.disabled = false;
+                joinBtn.disabled = false;
+                messageInput.disabled = true;
+                sendBtn.disabled = true;
+                onlineStatus.textContent = '离线';
+                onlineStatus.style.color = 'var(--offline)';
+                connectionStatus.textContent = '已断开';
+                connectionStatus.style.color = 'var(--offline)';
+                connectionStatusIndicator.innerHTML = '<i class="fas fa-circle"></i><span>连接状态: 已断开</span>';
+                connectionStatusIndicator.className = 'connection-status error';
+                
+                // 清除用户列表
+                userList.innerHTML = '';
+                onlineCount.textContent = '0';
+                
+                // 显示离开消息
+                addSystemMessage('您已离开聊天室');
+            }
+        }
+        
+        // 刷新连接
+        function refreshConnection() {
+            if (pusher) {
+                pusher.disconnect();
+            }
+            
+            showNotification('重新连接中...', 'warning');
+            
+            setTimeout(() => {
+                initializePusher();
+            }, 1000);
+        }
+        
+        // 切换主题
+        function changeTheme(theme) {
+            const root = document.documentElement;
+            
+            switch(theme) {
+                case 'blue':
+                    root.style.setProperty('--primary', '#6366f1');
+                    root.style.setProperty('--primary-light', '#818cf8');
+                    root.style.setProperty('--primary-dark', '#4f46e5');
+                    root.style.setProperty('--bg-gradient', 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)');
+                    break;
+                case 'green':
+                    root.style.setProperty('--primary', '#10b981');
+                    root.style.setProperty('--primary-light', '#34d399');
+                    root.style.setProperty('--primary-dark', '#047857');
+                    root.style.setProperty('--bg-gradient', 'linear-gradient(135deg, #10b981 0%, #047857 100%)');
+                    break;
+                case 'pink':
+                    root.style.setProperty('--primary', '#ec4899');
+                    root.style.setProperty('--primary-light', '#f472b6');
+                    root.style.setProperty('--primary-dark', '#be185d');
+                    root.style.setProperty('--bg-gradient', 'linear-gradient(135deg, #ec4899 0%, #be185d 100%)');
+                    break;
+                case 'orange':
+                    root.style.setProperty('--primary', '#f59e0b');
+                    root.style.setProperty('--primary-light', '#fbbf24');
+                    root.style.setProperty('--primary-dark', '#d97706');
+                    root.style.setProperty('--bg-gradient', 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)');
+                    break;
+            }
+            
+            showNotification('主题已切换');
+        }
+        
+        // 设置事件监听器
+        function setupEventListeners() {
+            // 加入聊天按钮
+            joinBtn.addEventListener('click', joinChat);
+            
+            // 发送消息按钮
+            sendBtn.addEventListener('click', sendMessage);
+            
+            // 按Enter发送消息
+            messageInput.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    sendMessage();
+                }
+            });
+            
+            // 离开按钮
+            leaveBtn.addEventListener('click', leaveChat);
+            
+            // 刷新按钮
+            refreshBtn.addEventListener('click', refreshConnection);
+            
+            // 用户名输入框按Enter加入
+            usernameInput.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    joinChat();
+                }
+            });
+            
+            // 联系开发者按钮
+            contactDevBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                contactModal.style.display = 'flex';
+            });
+            
+            // 关闭模态框按钮
+            closeModalBtn.addEventListener('click', function() {
+                contactModal.style.display = 'none';
+            });
+            
+            // 打开邮箱按钮
+            openEmailBtn.addEventListener('click', function() {
+                window.location.href = 'mailto:3530388417@qq.com';
+            });
+            
+            // 点击外部隐藏模态框
+            window.addEventListener('click', function(e) {
+                if (e.target === contactModal) {
+                    contactModal.style.display = 'none';
+                }
+            });
+        }
+    </script>
+</body>
+</html>
